@@ -35,6 +35,35 @@ def serve(
 
 
 @app.command()
+def sync(count: int = typer.Option(100, help="Cantidad máxima a sincronizar")):
+    """Sincroniza guardados desde Twitter / X mediante paginación con cookies."""
+    async def _run():
+        db = BookmarkDatabase(settings.db_path)
+        client = TwitterClient(settings.twitter_auth_token, settings.twitter_ct0)
+        classifier = AIClassifier()
+
+        if not client.is_configured_for_sync():
+            typer.echo("❌ Falta TWITTER_AUTH_TOKEN o TWITTER_CT0 en .env.local", err=True)
+            raise typer.Exit(1)
+
+        typer.echo(f"🔄 Sincronizando hasta {count} guardados desde X...")
+        bookmarks = await client.fetch_all_bookmarks(max_count=count)
+        typer.echo(f"   Descargados {len(bookmarks)} guardados. Guardando en SQLite...")
+
+        for b in bookmarks:
+            db.upsert_bookmark(b)
+
+        typer.echo("⚡ Clasificando guardados pendientes con IA...")
+        await classifier.classify_pending_batch(db, limit=min(100, len(bookmarks)))
+
+        stats = db.get_stats()
+        typer.echo(f"✅ Sincronización completada. Total en la bóveda: {stats.total_bookmarks}")
+        db.close()
+
+    asyncio.run(_run())
+
+
+@app.command()
 def add(url: str = typer.Argument(..., help="URL del post de Twitter/X a guardar")):
     """Captura e ingesta un post individual de Twitter/X."""
     async def _run():

@@ -1,6 +1,7 @@
 """Cliente HTTP para interactuar con Twitter / X (GraphQL Bookmarks, Syndication y oEmbed)."""
 
 import json
+import asyncio
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 import httpx
@@ -249,3 +250,55 @@ class TwitterClient:
             pass
 
         return bookmarks
+
+    def extract_cursor_bottom(self, data: Dict[str, Any]) -> Optional[str]:
+        """Extrae el cursor 'Bottom' para solicitar la página siguiente."""
+        timeline_data = (
+            data.get("data", {}).get("bookmark_timeline_v2")
+            or data.get("data", {}).get("bookmark_timeline")
+            or {}
+        )
+        instructions = timeline_data.get("timeline", {}).get("instructions", [])
+        for inst in instructions:
+            if inst.get("type") == "TimelineAddEntries":
+                for entry in inst.get("entries", []):
+                    content = entry.get("content", {})
+                    if content.get("cursorType") == "Bottom":
+                        return content.get("value")
+        return None
+
+    async def fetch_all_bookmarks(
+        self, max_count: int = 100, delay_seconds: float = 0.4
+    ) -> List[Bookmark]:
+        """
+        Descarga de forma paginada hasta max_count guardados de Twitter / X
+        respetando rate limits y evitando ciclos infinitos.
+        """
+        all_bookmarks: List[Bookmark] = []
+        cursor: Optional[str] = None
+        seen_ids = set()
+
+        while len(all_bookmarks) < max_count:
+            data = await self.fetch_bookmarks_page(cursor=cursor, count=20)
+            page_items = self.parse_graphql_timeline(data)
+            if not page_items:
+                break
+
+            new_in_page = 0
+            for item in page_items:
+                if item.tweet_id not in seen_ids:
+                    seen_ids.add(item.tweet_id)
+                    all_bookmarks.append(item)
+                    new_in_page += 1
+                    if len(all_bookmarks) >= max_count:
+                        break
+
+            next_cursor = self.extract_cursor_bottom(data)
+            if not next_cursor or next_cursor == cursor or new_in_page == 0:
+                break
+
+            cursor = next_cursor
+            if len(all_bookmarks) < max_count:
+                await asyncio.sleep(delay_seconds)
+
+        return all_bookmarks

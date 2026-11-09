@@ -146,9 +146,10 @@ async def trigger_classification(limit: int = Query(25, ge=1, le=100)):
 
 
 @router.post("/sync")
-async def sync_twitter_bookmarks(count: int = Query(20, ge=5, le=100)):
+async def sync_twitter_bookmarks(count: int = Query(100, ge=5, le=5000)):
     """
-    Sincroniza guardados desde Twitter / X mediante las cookies de sesión configuradas.
+    Sincroniza guardados desde Twitter / X mediante paginación con cookies de sesión.
+    Soporta desde 20 hasta 5000 guardados (o todos).
     """
     if not twitter_client.is_configured_for_sync():
         return {
@@ -162,19 +163,18 @@ async def sync_twitter_bookmarks(count: int = Query(20, ge=5, le=100)):
         }
 
     try:
-        data = await twitter_client.fetch_bookmarks_page(count=count)
-        bookmarks = twitter_client.parse_graphql_timeline(data)
+        bookmarks = await twitter_client.fetch_all_bookmarks(max_count=count)
         saved_count = 0
         for b in bookmarks:
             db.upsert_bookmark(b)
             saved_count += 1
 
-        # Clasificar automáticamente
-        await classifier.classify_pending_batch(db, limit=saved_count)
+        # Clasificar automáticamente lote de pendientes
+        classified = await classifier.classify_pending_batch(db, limit=min(100, saved_count))
 
         return {
             "status": "success",
-            "message": f"Sincronizados {saved_count} guardados desde X.",
+            "message": f"Sincronizados {saved_count} guardados desde X ({len(classified)} clasificados en este lote).",
             "synced_count": saved_count,
         }
     except Exception as e:

@@ -349,7 +349,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btn = document.getElementById("btn-exec-sync");
     const count = document.getElementById("sync-count").value;
     btn.disabled = true;
-    btn.textContent = "Sincronizando...";
+    btn.textContent = `Descargando (hasta ${count})...`;
     try {
       const res = await api(`/api/sync?count=${count}`, { method: "POST" });
       showToast(res.message, res.status !== "success");
