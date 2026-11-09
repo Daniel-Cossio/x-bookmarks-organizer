@@ -19,7 +19,7 @@ TWITTER_WEB_BEARER = (
 )
 
 # Query ID del endpoint Bookmarks en Twitter Web
-GRAPHQL_BOOKMARKS_URL = "https://x.com/i/api/graphql/q9PdgmY1gyk_Gv1nW9jyPw/Bookmarks"
+GRAPHQL_BOOKMARKS_URL = "https://x.com/i/api/graphql/qToeLeMs43Q8cr7tRYXmaQ/Bookmarks"
 
 
 class TwitterClient:
@@ -150,6 +150,7 @@ class TwitterClient:
             variables["cursor"] = cursor
 
         features = {
+            "graphql_timeline_v2_bookmark_timeline": True,
             "responsive_web_graphql_exclude_directive_enabled": True,
             "verified_phone_label_enabled": False,
             "responsive_web_graphql_skip_user_profile_image_extensions_enabled": False,
@@ -185,12 +186,12 @@ class TwitterClient:
         """Extrae bookmarks desde la estructura de respuesta GraphQL de Twitter."""
         bookmarks: List[Bookmark] = []
         try:
-            instructions = (
-                data.get("data", {})
-                .get("bookmark_timeline", {})
-                .get("timeline", {})
-                .get("instructions", [])
+            timeline_data = (
+                data.get("data", {}).get("bookmark_timeline_v2")
+                or data.get("data", {}).get("bookmark_timeline")
+                or {}
             )
+            instructions = timeline_data.get("timeline", {}).get("instructions", [])
             entries = []
             for inst in instructions:
                 if inst.get("type") == "TimelineAddEntries":
@@ -202,6 +203,9 @@ class TwitterClient:
                 tweet_results = item_content.get("tweet_results", {}).get("result", {})
                 if not tweet_results:
                     continue
+
+                if tweet_results.get("__typename") == "TweetWithVisibilityResults":
+                    tweet_results = tweet_results.get("tweet", {})
 
                 legacy = tweet_results.get("legacy", {})
                 core = tweet_results.get("core", {}).get("user_results", {}).get("result", {})
