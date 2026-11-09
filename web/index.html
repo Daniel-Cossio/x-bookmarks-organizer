@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>X-Bookmarks Organizer — Guardados Inteligentes</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Header Principal -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand">
+        <span class="brand-icon">🔖</span>
+        <div>
+          <h1>X-Bookmarks Hub</h1>
+          <span class="brand-subtitle">Idea #005 • Categorización con IA</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-center">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Buscar por texto, autor, tags (FTS5)..." aria-label="Buscador">
+        <button id="btn-clear-search" class="btn-clear hidden" title="Limpiar">✕</button>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <a href="http://localhost:8080" target="_blank" class="btn-ideahub" title="Volver al panel de IdeaHub">
+        🧠 <span>IdeaHub</span>
+      </a>
+      <button id="btn-open-add" class="btn-primary" title="Añadir un tweet por URL">
+        <span>+</span> <span>Guardar Post</span>
+      </button>
+      <button id="btn-classify" class="btn-action" title="Clasificar pendientes con IA">
+        <span>⚡</span> <span>Clasificar IA</span>
+      </button>
+      <button id="btn-open-sync" class="btn-action" title="Sincronizar guardados desde X">
+        <span>🔄</span> <span>Sync X</span>
+      </button>
+      <button id="btn-open-import" class="btn-secondary" title="Importar archivo descargado de Twitter">
+        <span>📦</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Barra de Estadísticas Rápidas -->
+  <section class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-label">Total Guardados</span>
+      <span class="stat-value" id="stat-total">0</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Clasificados IA</span>
+      <span class="stat-value text-accent" id="stat-classified">0</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Pendientes</span>
+      <span class="stat-value text-muted" id="stat-pending">0</span>
+    </div>
+  </section>
+
+  <!-- Filtro por Categorías (Horizontal Scrollable) -->
+  <nav class="categories-bar" id="categories-bar" aria-label="Categorías">
+    <button class="cat-pill active" data-cat="all">
+      <span class="cat-icon">🌐</span> Todos <span class="cat-count" id="count-all">0</span>
+    </button>
+    <button class="cat-pill" data-cat="Inteligencia Artificial">
+      <span class="cat-icon">🤖</span> IA <span class="cat-count" id="count-ai">0</span>
+    </button>
+    <button class="cat-pill" data-cat="Videojuegos / Gaming">
+      <span class="cat-icon">🎮</span> Gaming <span class="cat-count" id="count-gaming">0</span>
+    </button>
+    <button class="cat-pill" data-cat="Humor / Memes">
+      <span class="cat-icon">😂</span> Humor <span class="cat-count" id="count-humor">0</span>
+    </button>
+    <button class="cat-pill" data-cat="Desarrollo / Software">
+      <span class="cat-icon">💻</span> Dev <span class="cat-count" id="count-dev">0</span>
+    </button>
+    <button class="cat-pill" data-cat="Hardware / Tech">
+      <span class="cat-icon">⚡</span> Tech <span class="cat-count" id="count-tech">0</span>
+    </button>
+    <button class="cat-pill" data-cat="Ciencia">
+      <span class="cat-icon">🔬</span> Ciencia <span class="cat-count" id="count-science">0</span>
+    </button>
+    <button class="cat-pill" data-cat="Finanzas / Crypto">
+      <span class="cat-icon">💰</span> Finanzas <span class="cat-count" id="count-finance">0</span>
+    </button>
+    <button class="cat-pill" data-cat="Otros / General">
+      <span class="cat-icon">📁</span> Otros <span class="cat-count" id="count-other">0</span>
+    </button>
+  </nav>
+
+  <!-- Filtros Secundarios -->
+  <div class="subfilters-bar">
+    <div class="filter-toggles">
+      <label class="toggle-chip">
+        <input type="checkbox" id="toggle-has-links">
+        <span>🔗 Con Enlaces Externos</span>
+      </label>
+      <label class="toggle-chip">
+        <input type="checkbox" id="toggle-has-media">
+        <span>🖼️ Con Imágenes/Video</span>
+      </label>
+    </div>
+    <div class="results-info" id="results-info">Mostrando guardados...</div>
+  </div>
+
+  <!-- Contenedor Principal de Guardados (Grid de Tarjetas) -->
+  <main class="main-content">
+    <div id="bookmarks-grid" class="bookmarks-grid">
+      <!-- Se inyectan dinámicamente -->
+    </div>
+    <div id="empty-state" class="empty-state hidden">
+      <div class="empty-icon">📭</div>
+      <h3>No hay guardados en esta vista</h3>
+      <p>Añade un post por URL, sincroniza tu cuenta o importa tu archivo de Twitter.</p>
+      <button class="btn-primary" onclick="document.getElementById('btn-open-add').click()">+ Guardar Primer Post</button>
+    </div>
+  </main>
+
+  <!-- Modal: Guardar Post por URL -->
+  <div id="modal-add" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" id="backdrop-add"></div>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🔗 Guardar Post de Twitter / X</h3>
+        <button class="btn-close-modal" id="btn-close-add">✕</button>
+      </div>
+      <form id="form-add" class="modal-body">
+        <label for="input-tweet-url" class="form-label">Enlace del Tweet o Post puntual:</label>
+        <input type="url" id="input-tweet-url" placeholder="https://x.com/usuario/status/123456789..." required autofocus>
+        
+        <label for="select-manual-cat" class="form-label">Categoría inicial (opcional):</label>
+        <select id="select-manual-cat">
+          <option value="">✨ Auto-detectar con IA</option>
+        </select>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="btn-cancel-add">Cancelar</button>
+          <button type="submit" class="btn-primary" id="btn-submit-add">Guardar y Analizar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Sincronización X -->
+  <div id="modal-sync" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" id="backdrop-sync"></div>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🔄 Sincronizar Guardados desde X</h3>
+        <button class="btn-close-modal" id="btn-close-sync">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">
+          Sincroniza tus últimos bookmarks directamente desde tu sesión web de Twitter/X usando las cookies configuradas en el entorno.
+        </p>
+        <div class="form-row">
+          <label for="sync-count">Cantidad a descargar:</label>
+          <select id="sync-count">
+            <option value="20" selected>20 guardados</option>
+            <option value="50">50 guardados</option>
+            <option value="100">100 guardados</option>
+          </select>
+        </div>
+        <div class="callout-box">
+          <span class="callout-icon">💡</span>
+          <span>Las cookies <code>TWITTER_AUTH_TOKEN</code> y <code>TWITTER_CT0</code> deben estar en tu <code>.env.local</code>. Si no están configuradas, puedes usar el botón "+ Guardar Post" o importar tu archivo de datos.</span>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="btn-cancel-sync">Cerrar</button>
+          <button type="button" class="btn-primary" id="btn-exec-sync">Iniciar Sincronización</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Importar Archivo de Twitter -->
+  <div id="modal-import" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" id="backdrop-import"></div>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📦 Importar Archivo de Twitter</h3>
+        <button class="btn-close-modal" id="btn-close-import">✕</button>
+      </div>
+      <form id="form-import" class="modal-body">
+        <p class="modal-desc">
+          Indica la ruta absoluta en el servidor de tu archivo <code>bookmarks.js</code> o el archivo <code>.zip</code> de datos descargado de X.
+        </p>
+        <label for="input-archive-path" class="form-label">Ruta del archivo en el servidor:</label>
+        <input type="text" id="input-archive-path" placeholder="/home/ubuntu/.../bookmarks.js o .zip" required>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="btn-cancel-import">Cancelar</button>
+          <button type="submit" class="btn-primary" id="btn-exec-import">Importar Guardados</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
