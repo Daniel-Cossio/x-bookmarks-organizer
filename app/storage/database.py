@@ -213,7 +213,8 @@ class BookmarkDatabase:
         if where_clauses:
             query_parts.append("WHERE " + " AND ".join(where_clauses))
 
-        query_parts.append("ORDER BY id DESC LIMIT ? OFFSET ?")
+        # Ordenar estrictamente de más reciente a más antiguo según el Snowflake ID de X
+        query_parts.append("ORDER BY CAST(tweet_id AS INTEGER) DESC, id DESC LIMIT ? OFFSET ?")
         params.extend([filters.limit, filters.offset])
 
         sql = " ".join(query_parts)
@@ -223,7 +224,7 @@ class BookmarkDatabase:
     def get_unclassified(self, limit: int = 50) -> List[Bookmark]:
         """Obtiene los bookmarks pendientes de clasificar con IA."""
         rows = self._conn.execute(
-            "SELECT * FROM bookmarks WHERE is_classified = 0 ORDER BY id DESC LIMIT ?",
+            "SELECT * FROM bookmarks WHERE is_classified = 0 ORDER BY CAST(tweet_id AS INTEGER) DESC, id DESC LIMIT ?",
             (limit,),
         ).fetchall()
         return [self._row_to_bookmark(r) for r in rows]

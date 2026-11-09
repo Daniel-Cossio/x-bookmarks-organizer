@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const formImport = document.getElementById("form-import");
   const inputArchivePath = document.getElementById("input-archive-path");
 
-  // Helpers de escape HTML
+  // Helpers de escape HTML y fecha
   function esc(str) {
     if (!str) return "";
     return String(str)
@@ -41,6 +41,17 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  }
+
+  function formatDate(raw) {
+    if (!raw) return "";
+    try {
+      const d = new Date(raw);
+      if (isNaN(d.getTime())) return "";
+      return d.toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
+    } catch (_) {
+      return "";
+    }
   }
 
   // Notificaciones Toast
@@ -184,13 +195,21 @@ document.addEventListener("DOMContentLoaded", () => {
         ? `<div style="font-size:0.75rem; color:var(--text-subtle);"># ${b.tags.map(t => esc(t)).join("  # ")}</div>`
         : "";
 
+      const dateFormatted = formatDate(b.created_at);
+      const dateHtml = dateFormatted
+        ? `<span class="tweet-date" style="color:var(--text-subtle); font-size:0.75rem; margin-left:0.35rem;">• ${esc(dateFormatted)}</span>`
+        : "";
+
       card.innerHTML = `
         <div class="card-top">
           <div class="author-block">
             ${avatarHtml}
             <div class="author-info">
               <span class="author-name">${esc(b.author_name || b.author_username)}</span>
-              <span class="author-handle">@${esc(b.author_username)}</span>
+              <div style="display:flex; align-items:center; flex-wrap:wrap;">
+                <span class="author-handle">@${esc(b.author_username)}</span>
+                ${dateHtml}
+              </div>
             </div>
           </div>
           <span class="cat-badge" data-cat="${esc(b.category)}">${esc(b.category)}</span>
